@@ -19,7 +19,9 @@ Capitalize on low hanging fruit to identify a ballpark value added activity to b
 
 [yellow]Press Enter, then Tab/Backtab for word selections[white]`
 
-func streamer(w *tview.TextView, numSelections *int) {
+func streamer(w *tview.TextView) {
+	numSelections := 0
+
 	fmt.Fprintln(w, "Opening serial device...")
 
 	time.Sleep(8 * time.Second)
@@ -31,8 +33,8 @@ func streamer(w *tview.TextView, numSelections *int) {
 			word = "[#ff0000]the[white]"
 		}
 		if word == "to" {
-			word = fmt.Sprintf(`["%d"]to[""]`, *numSelections)
-			*numSelections++
+			word = fmt.Sprintf(`["%d"]to[""]`, numSelections)
+			numSelections++
 		}
 
 		fmt.Fprintf(w, "%s ", word)
@@ -69,8 +71,7 @@ func main() {
 	textView.SetBorder(true).
 		SetTitle("[ Serial Stream ]")
 
-	numSelections := 0
-	go streamer(textView, &numSelections)
+	go streamer(textView)
 
 	flexCenter := tview.NewFlex().SetDirection(tview.FlexRow)
 	flexCenter.AddItem(textView, 0, 1, false)
