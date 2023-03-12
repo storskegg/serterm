@@ -3,7 +3,6 @@ package main
 
 import (
 	"fmt"
-	"io"
 	"strconv"
 	"strings"
 	"time"
@@ -20,7 +19,13 @@ Capitalize on low hanging fruit to identify a ballpark value added activity to b
 
 [yellow]Press Enter, then Tab/Backtab for word selections[white]`
 
-func streamer(w io.Writer, numSelections *int) {
+func streamer(w *tview.TextView, numSelections *int) {
+	fmt.Fprintln(w, "Opening serial device...")
+
+	time.Sleep(8 * time.Second)
+
+	w.Clear()
+
 	for _, word := range strings.Split(corporate, " ") {
 		if word == "the" {
 			word = "[#ff0000]the[white]"
@@ -33,6 +38,7 @@ func streamer(w io.Writer, numSelections *int) {
 		fmt.Fprintf(w, "%s ", word)
 		time.Sleep(25 * time.Millisecond)
 	}
+
 }
 
 var port = 0
@@ -62,6 +68,9 @@ func main() {
 
 	textView.SetBorder(true).
 		SetTitle("[ Serial Stream ]")
+
+	numSelections := 0
+	go streamer(textView, &numSelections)
 
 	flexCenter := tview.NewFlex().SetDirection(tview.FlexRow)
 	flexCenter.AddItem(textView, 0, 1, false)
@@ -112,7 +121,4 @@ func main() {
 	if err := app.Run(); err != nil {
 		panic(err)
 	}
-
-	numSelections := 0
-	go streamer(textView, &numSelections)
 }
