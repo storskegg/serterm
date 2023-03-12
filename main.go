@@ -18,7 +18,7 @@ Bring to the table win-win survival strategies to ensure proactive domination. A
 
 Capitalize on low hanging fruit to identify a ballpark value added activity to beta test. Override the digital divide with additional clickthroughs from DevOps. Nanotechnology immersion along the information highway will close the loop on focusing solely on the bottom line.
 
-[yellow]Press Enter, then Tab/Backtab for word selections`
+[yellow]Press Enter, then Tab/Backtab for word selections[white]`
 
 func streamer(w io.Writer, numSelections *int) {
 	for _, word := range strings.Split(corporate, " ") {
@@ -34,6 +34,8 @@ func streamer(w io.Writer, numSelections *int) {
 		time.Sleep(25 * time.Millisecond)
 	}
 }
+
+var port = 0
 
 func main() {
 	app := tview.NewApplication()
@@ -58,52 +60,59 @@ func main() {
 			app.Draw()
 		})
 
-	numSelections := 0
-	go streamer(textView, &numSelections)
-
-	textView.SetDoneFunc(func(key tcell.Key) {
-		currentSelection := textView.GetHighlights()
-
-		if key == tcell.KeyEnter {
-			if len(currentSelection) > 0 {
-				textView.Highlight()
-			} else {
-				textView.Highlight("0").ScrollToHighlight()
-			}
-		} else if len(currentSelection) > 0 {
-			index, _ := strconv.Atoi(currentSelection[0])
-			if key == tcell.KeyTab {
-				index = (index + 1) % numSelections
-			} else if key == tcell.KeyBacktab {
-				index = (index - 1 + numSelections) % numSelections
-			} else {
-				return
-			}
-			textView.Highlight(strconv.Itoa(index)).ScrollToHighlight()
-		}
-	})
-
 	textView.SetBorder(true).
-		SetTitle("Middle (3 x height of Top)")
+		SetTitle("[ Serial Stream ]")
 
 	flexCenter := tview.NewFlex().SetDirection(tview.FlexRow)
 	flexCenter.AddItem(textView, 0, 1, false)
 
 	form := tview.NewForm()
-	form.AddButton("Quit", func() {
+
+	form.AddInputField("Port", "0", 5, func(text string, lastChar rune) bool {
+		i, err := strconv.Atoi(text)
+		if err != nil {
+			return false
+		}
+		return i >= 0 && i < 24
+	}, func(text string) {
+		if text == "" {
+			return
+		}
+
+		p, err := strconv.Atoi(text)
+		if err == nil {
+			port = p
+		}
+	}).AddButton("Send", func() {
+		fmt.Fprintf(textView, "changed: %d\n", port)
+	}).AddButton("Quit", func() {
 		app.Stop()
 	})
+	form.SetFieldBackgroundColor(tcell.ColorYellow)
+	form.SetFieldTextColor(tcell.ColorBlack)
+	btnStyle := tcell.Style{}.
+		Background(tcell.ColorDarkBlue).
+		Foreground(tcell.ColorWhite)
+	form.SetButtonStyle(btnStyle)
 
 	form.
 		SetBorder(true).
-		SetTitle("Bottom (5 rows)").
-		SetBackgroundColor(tcell.ColorBlack)
-	flexCenter.AddItem(form, 5, 1, true)
+		SetTitle("[ Commands ]")
+
+	form.SetBackgroundColor(tcell.ColorBlack)
+
+	flexCenter.AddItem(form, 10, 1, true)
 
 	rootFlex := tview.NewFlex().
 		AddItem(flexCenter, 0, 2, true)
 
-	if err := app.SetRoot(rootFlex, true).EnableMouse(true).Run(); err != nil {
+	app.SetRoot(rootFlex, true)
+	app.EnableMouse(false)
+
+	if err := app.Run(); err != nil {
 		panic(err)
 	}
+
+	numSelections := 0
+	go streamer(textView, &numSelections)
 }
