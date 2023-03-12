@@ -3,6 +3,7 @@ package main
 
 import (
 	"fmt"
+	"io"
 	"strconv"
 	"strings"
 	"time"
@@ -19,8 +20,35 @@ Capitalize on low hanging fruit to identify a ballpark value added activity to b
 
 [yellow]Press Enter, then Tab/Backtab for word selections`
 
+func streamer(w io.Writer, numSelections *int) {
+	for _, word := range strings.Split(corporate, " ") {
+		if word == "the" {
+			word = "[#ff0000]the[white]"
+		}
+		if word == "to" {
+			word = fmt.Sprintf(`["%d"]to[""]`, *numSelections)
+			*numSelections++
+		}
+
+		fmt.Fprintf(w, "%s ", word)
+		time.Sleep(25 * time.Millisecond)
+	}
+}
+
 func main() {
 	app := tview.NewApplication()
+	app.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
+		switch event.Key() {
+		case tcell.KeyCtrlX:
+			app.Stop()
+			return nil
+		case tcell.KeyCtrlQ:
+			app.Stop()
+			return nil
+		default:
+			return event
+		}
+	})
 
 	textView := tview.NewTextView().
 		SetDynamicColors(true).
@@ -31,21 +59,11 @@ func main() {
 		})
 
 	numSelections := 0
-	go func() {
-		for _, word := range strings.Split(corporate, " ") {
-			if word == "the" {
-				word = "[#ff0000]the[white]"
-			}
-			if word == "to" {
-				word = fmt.Sprintf(`["%d"]to[""]`, numSelections)
-				numSelections++
-			}
-			fmt.Fprintf(textView, "%s ", word)
-			time.Sleep(25 * time.Millisecond)
-		}
-	}()
+	go streamer(textView, &numSelections)
+
 	textView.SetDoneFunc(func(key tcell.Key) {
 		currentSelection := textView.GetHighlights()
+
 		if key == tcell.KeyEnter {
 			if len(currentSelection) > 0 {
 				textView.Highlight()
@@ -66,18 +84,20 @@ func main() {
 	})
 
 	textView.SetBorder(true).
-		SetTitle("Middle (3 x height of Top)").
-		SetBackgroundColor(tcell.ColorBlack)
+		SetTitle("Middle (3 x height of Top)")
 
 	flexCenter := tview.NewFlex().SetDirection(tview.FlexRow)
 	flexCenter.AddItem(textView, 0, 1, true)
 
-	boxCenterBottom := tview.NewBox().SetBorder(true).SetTitle("Bottom (5 rows)")
+	boxCenterBottom := tview.NewBox().
+		SetBorder(true).
+		SetTitle("Bottom (5 rows)").
+		SetBackgroundColor(tcell.ColorBlack)
 	flexCenter.AddItem(boxCenterBottom, 5, 1, false)
 
 	rootFlex := tview.NewFlex().
-		AddItem(flexCenter, 0, 2, false)
-
+		AddItem(flexCenter, 0, 2, true)
+	
 	if err := app.SetRoot(rootFlex, true).EnableMouse(true).Run(); err != nil {
 		panic(err)
 	}
