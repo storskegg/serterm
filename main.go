@@ -87,17 +87,22 @@ func main() {
 		SetTitle("Middle (3 x height of Top)")
 
 	flexCenter := tview.NewFlex().SetDirection(tview.FlexRow)
-	flexCenter.AddItem(textView, 0, 1, true)
+	flexCenter.AddItem(textView, 0, 1, false)
 
-	boxCenterBottom := tview.NewBox().
+	form := tview.NewForm()
+	form.AddButton("Quit", func() {
+		app.Stop()
+	})
+
+	form.
 		SetBorder(true).
 		SetTitle("Bottom (5 rows)").
 		SetBackgroundColor(tcell.ColorBlack)
-	flexCenter.AddItem(boxCenterBottom, 5, 1, false)
+	flexCenter.AddItem(form, 5, 1, true)
 
 	rootFlex := tview.NewFlex().
 		AddItem(flexCenter, 0, 2, true)
-	
+
 	if err := app.SetRoot(rootFlex, true).EnableMouse(true).Run(); err != nil {
 		panic(err)
 	}
