@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"runtime/debug"
 	"strings"
 	"time"
 
@@ -19,13 +20,14 @@ func main() {
 	defer func() {
 		if r := recover(); r != nil {
 			fmt.Println("Recovered in f:", r)
+			debug.PrintStack()
 			os.Exit(100)
 		}
 	}()
 
 	cmd := ""
 
-	var sd io.ReadWriteCloser
+	sd := io2.NewLoopBack()
 
 	app := tview.NewApplication()
 	app.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
@@ -49,6 +51,10 @@ func main() {
 			app.Draw()
 		})
 
+	recvWriter := io2.NewRecvPrepender(textView)
+	sp := io2.NewSendPrepender(textView)
+	sendWriter := io.MultiWriter(sd, sp)
+
 	textView.SetBorder(true).
 		SetTitle("[ Serial Stream ]")
 
@@ -59,7 +65,6 @@ func main() {
 		textView.SetText("Initializing serial device...")
 		time.Sleep(1 * time.Second)
 		textView.Clear()
-		sd = io2.NewLoopBack()
 
 		s := bufio.NewScanner(sd)
 		s.Split(bufio.ScanLines)
@@ -69,8 +74,7 @@ func main() {
 				return
 			default:
 				if s.Scan() {
-					line := strings.TrimSpace(s.Text())
-					textView.Write([]byte(fmt.Sprintf("[orange]Response:[white] '%s'\n", line)))
+					recvWriter.Write([]byte(strings.TrimSpace(s.Text())))
 				}
 			}
 		}
@@ -85,8 +89,10 @@ func main() {
 		if text == "" {
 			return
 		}
+		cmd = text
 	}).AddButton("Send", func() {
-		sd.Write([]byte(strings.TrimSpace(cmd) + "\n"))
+		sendWriter.Write([]byte(strings.TrimSpace(cmd) + "\n"))
+		//form.GetFormItemByLabel("Command").
 	}).AddButton("Quit", func() {
 		app.Stop()
 	})
@@ -103,7 +109,7 @@ func main() {
 
 	form.SetBackgroundColor(tcell.ColorBlack)
 
-	flexCenter.AddItem(form, 10, 1, true)
+	flexCenter.AddItem(form, 7, 1, true)
 
 	rootFlex := tview.NewFlex().
 		AddItem(flexCenter, 0, 2, true)
