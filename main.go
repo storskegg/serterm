@@ -51,8 +51,8 @@ func main() {
 			app.Draw()
 		})
 
-	recvWriter := io2.NewRecvPrepender(textView)
-	sp := io2.NewSendPrepender(textView)
+	recvWriter := NewRecvPrepender(textView)
+	sp := NewSendPrepender(textView)
 	sendWriter := io.MultiWriter(sd, sp)
 
 	textView.SetBorder(true).
@@ -65,6 +65,7 @@ func main() {
 		textView.SetText("Initializing serial device...")
 		time.Sleep(1 * time.Second)
 		textView.Clear()
+		app.Draw()
 
 		s := bufio.NewScanner(sd)
 		s.Split(bufio.ScanLines)
