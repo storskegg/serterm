@@ -2,50 +2,31 @@
 package main
 
 import (
+	"bufio"
+	"context"
 	"fmt"
-	"strconv"
+	"io"
+	"os"
 	"strings"
 	"time"
 
 	"github.com/gdamore/tcell/v2"
 	"github.com/rivo/tview"
+	io2 "github.com/storskegg/serterm/io"
 )
 
-const corporate = `Leverage agile frameworks to provide a robust synopsis for high level overviews. Iterative approaches to corporate strategy foster collaborative thinking to further the overall value proposition. Organically grow the holistic world view of disruptive innovation via workplace diversity and empowerment.
-
-Bring to the table win-win survival strategies to ensure proactive domination. At the end of the day, going forward, a new normal that has evolved from generation X is on the runway heading towards a streamlined cloud solution. User generated content in real-time will have multiple touchpoints for offshoring.
-
-Capitalize on low hanging fruit to identify a ballpark value added activity to beta test. Override the digital divide with additional clickthroughs from DevOps. Nanotechnology immersion along the information highway will close the loop on focusing solely on the bottom line.
-
-[yellow]Press Enter, then Tab/Backtab for word selections[white]`
-
-func streamer(w *tview.TextView) {
-	numSelections := 0
-
-	fmt.Fprintln(w, "Opening serial device...")
-
-	time.Sleep(8 * time.Second)
-
-	w.Clear()
-
-	for _, word := range strings.Split(corporate, " ") {
-		if word == "the" {
-			word = "[#ff0000]the[white]"
-		}
-		if word == "to" {
-			word = fmt.Sprintf(`["%d"]to[""]`, numSelections)
-			numSelections++
-		}
-
-		fmt.Fprintf(w, "%s ", word)
-		time.Sleep(25 * time.Millisecond)
-	}
-
-}
-
-var port = 0
-
 func main() {
+	defer func() {
+		if r := recover(); r != nil {
+			fmt.Println("Recovered in f:", r)
+			os.Exit(100)
+		}
+	}()
+
+	cmd := ""
+
+	var sd io.ReadWriteCloser
+
 	app := tview.NewApplication()
 	app.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
 		switch event.Key() {
@@ -71,30 +52,41 @@ func main() {
 	textView.SetBorder(true).
 		SetTitle("[ Serial Stream ]")
 
-	go streamer(textView)
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	go func() {
+		textView.SetText("Initializing serial device...")
+		time.Sleep(1 * time.Second)
+		textView.Clear()
+		sd = io2.NewLoopBack()
+
+		s := bufio.NewScanner(sd)
+		s.Split(bufio.ScanLines)
+		for {
+			select {
+			case <-ctx.Done():
+				return
+			default:
+				if s.Scan() {
+					line := strings.TrimSpace(s.Text())
+					textView.Write([]byte(fmt.Sprintf("[orange]Response:[white] '%s'\n", line)))
+				}
+			}
+		}
+	}()
 
 	flexCenter := tview.NewFlex().SetDirection(tview.FlexRow)
 	flexCenter.AddItem(textView, 0, 1, false)
 
 	form := tview.NewForm()
 
-	form.AddInputField("Port", "0", 5, func(text string, lastChar rune) bool {
-		i, err := strconv.Atoi(text)
-		if err != nil {
-			return false
-		}
-		return i >= 0 && i < 24
-	}, func(text string) {
+	form.AddInputField("Command", "", 20, nil, func(text string) {
 		if text == "" {
 			return
 		}
-
-		p, err := strconv.Atoi(text)
-		if err == nil {
-			port = p
-		}
 	}).AddButton("Send", func() {
-		fmt.Fprintf(textView, "changed: %d\n", port)
+		sd.Write([]byte(strings.TrimSpace(cmd) + "\n"))
 	}).AddButton("Quit", func() {
 		app.Stop()
 	})

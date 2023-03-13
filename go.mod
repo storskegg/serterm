@@ -5,6 +5,7 @@ go 1.20
 require (
 	github.com/gdamore/tcell/v2 v2.6.0
 	github.com/rivo/tview v0.0.0-20230307144320-cc10b288e304
+	go.uber.org/multierr v1.10.0
 )
 
 require (
